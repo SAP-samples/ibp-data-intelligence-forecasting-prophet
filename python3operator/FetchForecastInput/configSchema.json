@@ -1,0 +1,65 @@
+{
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "$id": "http://sap.com/vflow/FetchForecastInput.configSchema.json",
+    "type": "object",
+    "properties": {
+        "codelanguage": {
+            "type": "string"
+        },
+        "script": {
+            "type": "string"
+        },
+        "ODataConnection": {
+            "title": "OData Connection",
+            "description": "The connection to OData",
+            "type": "object",
+            "properties": {
+                "configurationType": {
+                    "title": "Configuration Type",
+                    "type": "string",
+                    "enum": [
+                        "Manual",
+                        "Configuration Manager"
+                    ]
+                },
+                "connectionid": {
+                    "title": "Connection ID",
+                    "description": "Name of connection from Connection Manager",
+                    "type": "string",
+                    "format": "com.sap.dh.connection.id",
+                    "sap_vflow_valuehelp": {
+                        "url": "/app/datahub-app-connection/connections?connectionTypes=ODATA",
+                        "valuepath": "id",
+                        "displayStyle": "autocomplete"
+                    },
+                    "sap_vflow_constraints": {
+                        "ui_visibility": [
+                            {
+                                "name": "configurationType",
+                                "value": "Configuration Manager",
+                                "text": "configurationType=Configuration Manager"
+                            }
+                        ]
+                    }
+                },
+                "connectionProperties": {
+                    "title": "Connection Properties",
+                    "description": "Manual Entry of Connection Properties",
+                    "$ref": "http://sap.com/vflow/com.sap.dh.connections.odata.schema.json",
+                    "sap_vflow_constraints": {
+                        "ui_visibility": [
+                            {
+                                "name": "configurationType",
+                                "value": "Manual",
+                                "text": "configurationType=Manual"
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "required": [
+        "ODataConnection"
+    ]
+}

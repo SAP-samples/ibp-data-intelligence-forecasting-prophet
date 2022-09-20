@@ -1,0 +1,2 @@
+The updated 'DP 120 Statistical Forecast' planning view is published in SAP Best Practices Explorer (https://rapid.sap.com/bp/#/rds_ibp).
+It is contained in the zip file you can download from the SAP Best Practices Explorer, under ACCELERATORS, in the Implementation section: Technical assets for SAPIBP1 – time-series-based planning (sample data, master data, planning view templates).

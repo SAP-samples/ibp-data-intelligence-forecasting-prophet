@@ -1,0 +1,405 @@
+{
+	"properties": {},
+	"description": "IBP External Forecasting Service",
+	"processes": {
+		"python3operator111": {
+			"component": "com.sap.system.python3Operator",
+			"metadata": {
+				"label": "Execute algorithm",
+				"x": 671.9999961853027,
+				"y": 159.5,
+				"height": 80,
+				"width": 120,
+				"extensible": true,
+				"filesRequired": [
+					"script.py"
+				],
+				"generation": 1,
+				"config": {
+					"script": "import json\r\nimport io\r\nimport datetime\r\nfrom typing import List, Dict\r\nimport pandas as pd\r\nimport numpy as np\r\nfrom multiprocessing import Pool, cpu_count, get_context\r\nfrom demandForecasting.algorithms import average_forecast, prophet_forecast\r\n\r\n\r\n# Algorithm mapping\r\nALGORTIHMS = {\"Average\": average_forecast,\r\n              \"Prophet\": prophet_forecast\r\n             }\r\n    \r\n\r\ndef convert_timeseries(algorithm_data, historical_periods, time_period):\r\n    # prepare algorithm_data\r\n    df = pd.DataFrame(algorithm_data)\r\n    df[\"timestamp\"] = pd.to_datetime(time_period[\"StartTimeStamp\"]).tz_localize(None)\r\n    \r\n    df_train = df[:historical_periods].copy()\r\n    df_expost = df_train.drop(\"HISTORY\", axis=1).copy()\r\n    df_pred = df.drop(\"HISTORY\", axis=1)[historical_periods:].copy()\r\n    \r\n    return df_train, df_expost, df_pred\r\n  \r\n\r\ndef trigger_algorithm(data_string):\r\n    # Load input data\r\n    data_and_params = json.loads(data_string)\r\n    data_dicts = data_and_params[\"data_dicts\"]\r\n    params = data_and_params[\"parameters\"]\r\n    \r\n    # Store all parameters which are needed to calculate forecast in variables\r\n    algorithm_name = params[\"AlgorithmName\"]\r\n    historical_periods = params[\"HistoricalPeriods\"]\r\n    forecast_periods = params[\"ForecastPeriods\"]\r\n    algorithm_params = params[\"AlgorithmParameter\"]\r\n    request_id = params[\"RequestID\"]\r\n    \r\n    # Make sure the requested algorithm is available\r\n    if algorithm_name not in ALGORTIHMS.keys():\r\n        api.send(\"error\", json.dumps(\r\n                {\"error\": f\"Algorithm with name '{algorithm_name}' does not exist.\",\r\n                 \"request_id\": request_id}))\r\n        api.logger.error(f\"[DI LOG] Algorithm with name '{algorithm_name}' does not exist.\")\r\n        return\r\n    \r\n    try:\r\n        # parameters for forecast are: df_train, df_expost, df_pred, algorithm_params, historical_periods, forecast_periods, group_id, request_id\r\n        function_parameters = []\r\n        for data in data_dicts:\r\n            master_data = data[\"master_data\"]\r\n            df_train, df_expost, df_pred = convert_timeseries(data[\"algorithm_data\"], historical_periods, params[\"TimePeriod\"])\r\n            function_parameters.append((df_train, df_expost, df_pred, algorithm_params, historical_periods, forecast_periods, data[\"group_id\"], request_id, algorithm_name))\r\n            \r\n        \r\n        # run forecast in parallel\r\n        cpus = cpu_count()\r\n        threads = 4\r\n        no_of_groups = len(data_dicts)\r\n        api.logger.info(f\"[DI LOG] Using {threads} CPUs for parallel forecasting.\")\r\n        api.logger.info(f\"[DI LOG] Run algorithm '{algorithm_name}' for request id {request_id} including {no_of_groups} combinations started.\")\r\n        \r\n        # Create a pool with 'cpu_count' processes \r\n        start = datetime.datetime.now()\r\n        counter = 1\r\n        with get_context(\"spawn\").Pool(threads) as pool: \r\n            # Run parallel function and split the input among them \r\n            results = pool.starmap(ALGORTIHMS[algorithm_name], function_parameters)\r\n        \r\n        delta = datetime.datetime.now() - start\r\n        api.logger.info(f\"[DI LOG] Algorithm '{algorithm_name}' finished for request id {request_id} including {len(data_dicts)} combinations after {delta.total_seconds()} seconds.\")\r\n        \r\n\r\n        # send result for whole request including all groups \r\n        api.send(\"result\", json.dumps({\"request_id\": request_id, \"algorithm_name\": algorithm_name, \"result_list\": results, \"time\": delta.total_seconds()}))\r\n        api.logger.info(f\"[DI LOG] Forecast for request id {request_id} finished.\")\r\n        api.send(\"info\", f\"[Request {request_id}] Forecasting with '{algorithm_name}' finished successfully.\")\r\n        \r\n\r\n    except Exception as e:\r\n        api.send(\"error\", json.dumps(\r\n            {\"error\": \"Algorithm could not be triggered.\",\r\n             \"request_id\": request_id}))\r\n        api.logger.error(f\"[DI LOG] {e}\")\r\n        \r\n\r\n\r\napi.set_port_callback([\"data\"], trigger_algorithm)"
+				},
+				"additionalinports": [
+					{
+						"name": "data",
+						"type": "string"
+					}
+				],
+				"additionaloutports": [
+					{
+						"name": "result",
+						"type": "string"
+					},
+					{
+						"name": "error",
+						"type": "string"
+					},
+					{
+						"name": "info",
+						"type": "string"
+					}
+				]
+			},
+			"name": "python3operator11"
+		},
+		"python3operator31": {
+			"component": "com.sap.system.python3Operator",
+			"metadata": {
+				"label": "Build result message",
+				"x": 1101.9999933242798,
+				"y": 154.99999976158142,
+				"height": 80,
+				"width": 120,
+				"extensible": true,
+				"filesRequired": [
+					"script.py"
+				],
+				"generation": 1,
+				"config": {
+					"script": "import json\nimport datetime\n\n\n\ndef send_result_message(result_string: str):\n    \"\"\" Send result back to ODATA service from IBP. \"\"\"\n\n    result_dict = json.loads(result_string)\n    results = result_dict[\"result_list\"]\n    request_id = result_dict[\"request_id\"]\n    algorithm_name = result_dict[\"algorithm_name\"]\n    \n    output = {\n        \"RequestID\": request_id,\n        \"_AlgorithmDataOutput\": [],\n        \"_Message\": [],\n    }\n    \n    for result in results:\n        if \"err_message\" in result.keys():\n            # Algorithm failed for this specific group\n            message = {\n                \"RequestID\": request_id,\n                \"GroupID\": result[\"group_id\"],\n                \"MessageSequence\": 1,\n                \"MessageType\": \"E\",\n                \"MessageText\": result[\"err_message\"][:200],\n            }\n            output[\"_Message\"].append(message)\n            \n        else:\n            # Expost\n            expost_data = {\n                \"RequestID\": request_id,\n                \"GroupID\": result[\"group_id\"],\n                \"SemanticKeyFigure\": \"EXPOST\",\n                \"ResultData\": result[\"EXPOST\"],\n            }\n            output[\"_AlgorithmDataOutput\"].append(expost_data)\n            # Forecast\n            forecast_data = {\n                \"RequestID\": request_id,\n                \"GroupID\": result[\"group_id\"],\n                \"SemanticKeyFigure\": \"FORECAST\",\n                \"ResultData\": result[\"FORECAST\"],\n            }\n            output[\"_AlgorithmDataOutput\"].append(forecast_data)\n            \n            # Messages\n            message_sequence = 1\n            for message_text in result[\"messages\"]:\n                message = {\n                    \"RequestID\": request_id,\n                    \"GroupID\": result[\"group_id\"],\n                    \"MessageSequence\": message_sequence,\n                    \"MessageType\": \"I\",\n                    \"MessageText\": message_text[:200],\n                }\n                message_sequence += 1\n    \n                output[\"_Message\"].append(message)\n\n    # Header message\n    message_header = {\n        \"RequestID\": request_id,\n        \"GroupID\": -1,\n        \"MessageSequence\": 1,\n        \"MessageType\": \"I\",\n        \"MessageText\": f\"{algorithm_name} finished. (request {request_id}, {result_dict['time']:.2f} s, {datetime.datetime.now().strftime('%H:%M:%S')}).\"[:200],\n    }\n    output[\"_Message\"].append(message_header)\n    output_json = json.dumps(output)\n    \n    api.send(\"resultString\", output_json)\n    api.logger.info(f\"[DI LOG] Result for request id {request_id} was sent to IBP.\")\n    \n    \ndef send_error_message(error_string: str):\n    \n    error_msg = json.loads(error_string)\n    request_id = error_msg[\"request_id\"]\n    \n    output = {\n        \"RequestID\": request_id,\n        \"_Message\": [],\n    }\n    \n    # Header message\n    message_header = {\n        \"RequestID\": request_id,\n        \"GroupID\": -1,\n        \"MessageSequence\": 1,\n        \"MessageType\": \"E\",\n        \"MessageText\": f\"{error_msg['error']}\"[:200],\n    }\n    output[\"_Message\"].append(message_header)\n    output_json = json.dumps(output)\n    \n    api.send(\"resultString\", output_json)\n    api.logger.info(f\"[DI LOG] Unsuccessful result for request id {request_id} was sent to IBP.\")\n\n\n\napi.set_port_callback([\"result\"], send_result_message)\napi.set_port_callback([\"error\"], send_error_message)\n\n\n\n\n\n"
+				},
+				"additionalinports": [
+					{
+						"name": "result",
+						"type": "string"
+					},
+					{
+						"name": "error",
+						"type": "string"
+					}
+				],
+				"additionaloutports": [
+					{
+						"name": "resultString",
+						"type": "string"
+					}
+				]
+			},
+			"name": "python3operator3"
+		},
+		"openapiservlow1": {
+			"component": "com.sap.openapi.server",
+			"metadata": {
+				"label": "Listen to Requests",
+				"x": 72.99999904632568,
+				"y": 159.99999952316284,
+				"height": 80,
+				"width": 120,
+				"ui": "dynpath",
+				"config": {
+					"basePath": "/ibp/demand/ExternalForecastNotification",
+					"websocket": true,
+					"oneway": false
+				}
+			}
+		},
+		"python3operator1": {
+			"component": "com.sap.system.python3Operator",
+			"metadata": {
+				"label": "Extract RequestID",
+				"x": 257.99999809265137,
+				"y": 160.49999952316284,
+				"height": 80,
+				"width": 120,
+				"extensible": true,
+				"filesRequired": [
+					"script.py"
+				],
+				"generation": 1,
+				"config": {
+					"script": "from urllib.parse import urlparse, parse_qs\r\nimport logging\r\n\r\nlogging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')\r\n\r\n\r\n# Request from IBP system received\r\ndef on_IBP_request(msg):\r\n    \r\n    try:\r\n        # Extract Request ID from URL\r\n        request_uri = urlparse(msg.attributes['openapi.request_uri'])\r\n        request_params = parse_qs(request_uri.query)\r\n        request_id = int(request_params[\"RequestID\"][0])\r\n        api.send('requestId', request_id)\r\n        \r\n        # Send response message\r\n        attributes = {'message.request.id': msg.attributes['message.request.id']}\r\n        msg = api.Message(attributes=attributes, body=f\"Request {request_id} received.\")\r\n        api.send('output', msg)\r\n        api.send('info', f\"[Request {request_id}] Request was received.\")\r\n        api.logger.info(f\"[DI LOG] External forecasting is triggered for RequestID = {request_id}.\")\r\n    except Exception as e:\r\n        api.logger.error(f\"[DI LOG] Invalid Request: {e}.\")\r\n        \r\n        # Send response message\r\n        attributes = {'message.request.id': msg.attributes['message.request.id'],\r\n                      'openapi.status_code': 500,\r\n                      'Content-type': \"text/html\"\r\n        }\r\n        \r\n        body = f\"Request was not understood. Mandatory Parameter 'RequestID' is missing or not of type int. Forecasting could not be triggered.\"\r\n        \r\n        msg = api.Message(attributes=attributes, body=body)\r\n        api.send('output', msg)\r\n\r\n\r\napi.set_port_callback(\"input\", on_IBP_request)\r\n"
+				},
+				"additionalinports": [
+					{
+						"name": "input",
+						"type": "message"
+					}
+				],
+				"additionaloutports": [
+					{
+						"name": "output",
+						"type": "message"
+					},
+					{
+						"name": "requestId",
+						"type": "scalar",
+						"vtype-ID": "com.sap.core.int64"
+					},
+					{
+						"name": "info",
+						"type": "string"
+					}
+				]
+			}
+		},
+		"21multiplexer1": {
+			"component": "com.sap.system.multiplexer.2-1",
+			"metadata": {
+				"label": "2:1 Multiplexer",
+				"x": 924.9999942779541,
+				"y": 205.99999976158142,
+				"height": 80,
+				"width": 120,
+				"extensible": true,
+				"generation": 1,
+				"config": {}
+			}
+		},
+		"postresults2": {
+			"component": "POSTResults",
+			"metadata": {
+				"label": "POST Results",
+				"x": 1273.9999933242798,
+				"y": 154.99999976158142,
+				"height": 80,
+				"width": 120,
+				"extensible": true,
+				"filesRequired": [
+					"script.py"
+				],
+				"generation": 1,
+				"config": {
+					"ODataConnection": {
+						"configurationType": "Configuration Manager"
+					},
+					"path": "/Result"
+				}
+			}
+		},
+		"wiretap41": {
+			"component": "com.sap.util.wiretap",
+			"metadata": {
+				"label": "Watch general Progress",
+				"x": 1273.999994277954,
+				"y": 339.9999997615814,
+				"height": 80,
+				"width": 120,
+				"generation": 1,
+				"ui": "dynpath",
+				"config": {}
+			},
+			"name": "wiretap4"
+		},
+		"wiretap1": {
+			"component": "com.sap.util.wiretap",
+			"metadata": {
+				"label": "Watch forecast progress",
+				"x": 1274,
+				"y": 440,
+				"height": 80,
+				"width": 120,
+				"generation": 1,
+				"ui": "dynpath",
+				"config": {}
+			}
+		},
+		"fetchforecastinput1": {
+			"component": "FetchForecastInput",
+			"metadata": {
+				"label": "Fetch Forecast Input",
+				"x": 480,
+				"y": 160,
+				"height": 80,
+				"width": 120,
+				"extensible": true,
+				"filesRequired": [
+					"script.py"
+				],
+				"generation": 1,
+				"config": {
+					"ODataConnection": {
+						"configurationType": "Configuration Manager"
+					}
+				}
+			}
+		}
+	},
+	"groups": [
+		{
+			"name": "group1",
+			"nodes": [
+				"python3operator111"
+			],
+			"metadata": {
+				"description": "Prophet"
+			},
+			"tags": {
+				"prophet": ""
+			},
+			"multiplicity": 5
+		}
+	],
+	"connections": [
+		{
+			"metadata": {
+				"points": "795.9999961853027,199.5 858,199.5 858,237 919.9999942779541,236.99999976158142"
+			},
+			"src": {
+				"port": "error",
+				"process": "python3operator111"
+			},
+			"tgt": {
+				"port": "in1",
+				"process": "21multiplexer1"
+			}
+		},
+		{
+			"metadata": {
+				"points": "1048.999994277954,245.99999976158142 1073,246 1073,204 1096.9999933242798,203.99999976158142"
+			},
+			"src": {
+				"port": "out1",
+				"process": "21multiplexer1"
+			},
+			"tgt": {
+				"port": "error",
+				"process": "python3operator31"
+			}
+		},
+		{
+			"metadata": {
+				"points": "196.99999904632568,199.99999952316284 224.99999856948853,199.99999952316284 224.99999856948853,200.49999952316284 252.99999809265137,200.49999952316284"
+			},
+			"src": {
+				"port": "out",
+				"process": "openapiservlow1"
+			},
+			"tgt": {
+				"port": "input",
+				"process": "python3operator1"
+			}
+		},
+		{
+			"metadata": {
+				"points": "381.99999809265137,182.49999952316284 432,182.5 432,107 18,107 18,200 67.99999904632568,199.99999952316284"
+			},
+			"src": {
+				"port": "output",
+				"process": "python3operator1"
+			},
+			"tgt": {
+				"port": "ret",
+				"process": "openapiservlow1"
+			}
+		},
+		{
+			"metadata": {
+				"points": "381.99999809265137,218.49999952316284 406,218.5 406,380 1268.999994277954,379.9999997615814"
+			},
+			"src": {
+				"port": "info",
+				"process": "python3operator1"
+			},
+			"tgt": {
+				"port": "in",
+				"process": "wiretap41"
+			}
+		},
+		{
+			"metadata": {
+				"points": "795.9999961853027,181.5 946.5,181.5 946.5,186 1096.9999933242798,185.99999976158142"
+			},
+			"src": {
+				"port": "result",
+				"process": "python3operator111"
+			},
+			"tgt": {
+				"port": "result",
+				"process": "python3operator31"
+			}
+		},
+		{
+			"metadata": {
+				"points": "1225.9999933242798,194.99999976158142 1268.9999933242798,194.99999976158142"
+			},
+			"src": {
+				"port": "resultString",
+				"process": "python3operator31"
+			},
+			"tgt": {
+				"port": "result",
+				"process": "postresults2"
+			}
+		},
+		{
+			"metadata": {
+				"points": "1397.9999933242798,194.99999976158142 1448,195 1448,287.5 1219,287.5 1219,380 1268.999994277954,379.9999997615814"
+			},
+			"src": {
+				"port": "response",
+				"process": "postresults2"
+			},
+			"tgt": {
+				"port": "in",
+				"process": "wiretap41"
+			}
+		},
+		{
+			"metadata": {
+				"points": "795.9999961853027,217.5 817,217.5 817,480 1269,480"
+			},
+			"src": {
+				"port": "info",
+				"process": "python3operator111"
+			},
+			"tgt": {
+				"port": "in",
+				"process": "wiretap1"
+			}
+		},
+		{
+			"metadata": {
+				"points": "604,182 635.5,182 635.5,199.5 666.9999961853027,199.5"
+			},
+			"src": {
+				"port": "data",
+				"process": "fetchforecastinput1"
+			},
+			"tgt": {
+				"port": "data",
+				"process": "python3operator111"
+			}
+		},
+		{
+			"metadata": {
+				"points": "604,200 628,200 628,255 919.9999942779541,254.99999976158142"
+			},
+			"src": {
+				"port": "error",
+				"process": "fetchforecastinput1"
+			},
+			"tgt": {
+				"port": "in2",
+				"process": "21multiplexer1"
+			}
+		},
+		{
+			"metadata": {
+				"points": "604,218 619,218 619,380 1268.999994277954,379.9999997615814"
+			},
+			"src": {
+				"port": "info",
+				"process": "fetchforecastinput1"
+			},
+			"tgt": {
+				"port": "in",
+				"process": "wiretap41"
+			}
+		},
+		{
+			"metadata": {
+				"points": "381.99999809265137,200.49999952316284 428.5,200.5 428.5,200 475,200"
+			},
+			"src": {
+				"port": "requestId",
+				"process": "python3operator1"
+			},
+			"tgt": {
+				"port": "requestId",
+				"process": "fetchforecastinput1"
+			}
+		}
+	],
+	"inports": {},
+	"outports": {},
+	"metadata": {}
+}
