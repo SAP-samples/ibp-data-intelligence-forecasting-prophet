@@ -20,20 +20,6 @@ def create_result_string(results: List) -> str:
 # ------------------------------------
 # Algorithms
 # ------------------------------------
-"""Algorithm executor function
-
-    Args:
-        planning_object (Dict): Dictionary of the timeseries for one planning object
-        alogrithm_name (str): Name of the algortihm
-        parameters (Dict): Dictionary of the algorithm parameters
-        historical_periods (int): Number of historical periods
-        forecast_periods (int): Number of forecast periods
-        group_id (int): Group ID which identifies the group for which a result is calculated
-
-    Returns:
-        Dict: Dictionry of result strings
-"""
-
 
 def average_forecast(df_train: pd.DataFrame, df_expost: pd.DataFrame, df_pred: pd.DataFrame, algorithm_params: Dict,
                      historical_periods: int, forecast_periods: int, group_id: int, request_id: int,
