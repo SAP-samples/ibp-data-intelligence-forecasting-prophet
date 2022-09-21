@@ -13,7 +13,7 @@ This repository accompanies an SAP BTP mission which helps you to set up a seaml
 
 SAP Integrated Business Planning and SAP Data Intelligence licences are required for this repository to be used.
 
-## Additional Information
+## Configuration
 To learn about the functional details, and for step by step instructions to configure and implement the SAP IBP DI forecasting with Prophet solution, please visit the SAP Discovery Center and look up the mission Forecasting in SAP Integrated Business Planning with an external algorithm based on Prophet https://discovery-center.cloud.sap/missiondetail/4037
 
 ## How to obtain support
