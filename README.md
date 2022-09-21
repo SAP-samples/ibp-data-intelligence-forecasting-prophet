@@ -1,17 +1,3 @@
-# SAP-samples/repository-template
-This default template for SAP Samples repositories includes files for README, LICENSE, and .reuse/dep5. All repositories on github.com/SAP-samples will be created based on this template.
-
-# Containing Files
-
-1. The LICENSE file:
-In most cases, the license for SAP sample projects is `Apache 2.0`.
-
-2. The .reuse/dep5 file: 
-The [Reuse Tool](https://reuse.software/) must be used for your samples project. You can find the .reuse/dep5 in the project initial. Please replace the parts inside the single angle quotation marks < > by the specific information for your repository.
-
-3. The README.md file (this file):
-Please edit this file as it is the primary description file for your project. You can find some placeholder titles for sections below.
-
 # Forecasting in SAP Integrated Business Planning with an external algorithm based on Prophet
 
 <!--- Register repository https://api.reuse.software/register, then add REUSE badge:
@@ -27,11 +13,8 @@ This repository accompanies an SAP BTP mission which helps you to set up a seaml
 
 SAP Integrated Business Planning and SAP Data Intelligence licences are required for this repository to be used.
 
-## Download and Installation
-
-
-## Known Issues
-No Known Issues
+## Additional Information
+To learn about the functional details, and for step by step instructions to configure and implement the SAP IBP DI forecasting with Prophet solution, please visit the SAP Discovery Center and look up the mission Forecasting in SAP Integrated Business Planning with an external algorithm based on Prophet https://discovery-center.cloud.sap/missiondetail/4037
 
 ## How to obtain support
 [Create an issue](https://github.com/SAP-samples/ibp-data-intelligence-forecasting-prophet/issues) in this repository if you find a bug or have questions about the content.
