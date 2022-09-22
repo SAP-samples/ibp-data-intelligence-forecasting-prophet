@@ -61,10 +61,5 @@
     },
     "required": [
         "ODataConnection"
-    ],
-    
-    "_comment": {
-        "SPDX-FileCopyrightText": "2022 SAP SE", 
-        "SPDX-License-Identifier": "Apache-2.0"
-                }
+    ]
 }
