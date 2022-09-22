@@ -1,3 +1,6 @@
+#SPDX-FileCopyrightText: 2022 SAP SE
+#SPDX-License-Identifier: Apache-2.0
+
 import datetime
 import pandas as pd
 from typing import List, Dict
@@ -121,6 +124,3 @@ def prophet_forecast(df_train, df_expost, df_pred, algorithm_params, historical_
         result["err_message"] = f"Algorithm {algorithm_name} failed to calculate forecast. Error: {e}"
 
     return result
-
-#SPDX-FileCopyrightText: 2022 SAP SE
-#SPDX-License-Identifier: Apache-2.0
