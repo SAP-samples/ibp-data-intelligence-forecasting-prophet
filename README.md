@@ -1,8 +1,7 @@
+
 # Forecasting in SAP Integrated Business Planning with an external algorithm based on Prophet
 
-<!--- Register repository https://api.reuse.software/register, then add REUSE badge:
-[![REUSE status](https://api.reuse.software/badge/github.com/SAP-samples/REPO-NAME)](https://api.reuse.software/info/github.com/SAP-samples/REPO-NAME)
--->
+[![REUSE status](https://api.reuse.software/badge/github.com/SAP-samples/ibp-data-intelligence-forecasting-prophet)](https://api.reuse.software/info/github.com/SAP-samples/ibp-data-intelligence-forecasting-prophet)
 
 ## Description
 By extending the forecasting capabilities of SAP Integrated Business Planning for Supply Chain (SAP IBP) with SAP Data Intelligence in SAP BTP (SAP DI) you have the complete freedom in the choice of your forecasting algorithm.
