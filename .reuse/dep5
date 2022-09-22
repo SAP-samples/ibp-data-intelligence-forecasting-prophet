@@ -24,11 +24,11 @@ Disclaimer: The code in this project may include calls to APIs ("API Calls") of
  you any rights to use or access any SAP External Product, or provide any third
  parties the right to use of access any SAP External Product, through API Calls.
 
-Files: dockerfiles, pipelines, Planning View, python3operator, subengines
+Files: dockerfiles, pipelines, Planning View, python3operator, subengines, README.md
 Copyright:  2022 SAP SE
 License: Apache-2.0
 
 Files: dockerfiles/prophet
 Copyright: Facebook Core Data Science team https://facebook.github.io/prophet/
-License: MIT License
+License: MIT
 
