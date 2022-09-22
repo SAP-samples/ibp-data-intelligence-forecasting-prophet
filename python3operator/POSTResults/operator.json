@@ -20,10 +20,5 @@
 		"script": "import requests\r\n\r\n\r\ndef send_result(result_json_string: str):\r\n    with requests.Session() as session:\r\n        # get information from Configuration and Connection\r\n        conn = api.config.ODataConnection[\"connectionProperties\"]\r\n        full_url = conn[\"url\"] + api.config.path\r\n        user = conn[\"user\"]\r\n        password = conn[\"password\"]\r\n        \r\n        # Fetch CSRF-Token\r\n        token_request = session.get(full_url,\r\n                                     headers={\"X-CSRF-Token\": \"fetch\", \"Accept\": \"application/json\"},\r\n                                     auth=(user, password))\r\n        \r\n        \r\n        # Post request with CSRF-Token\r\n        result_send_post = session.post(full_url, result_json_string,\r\n                                         headers={\"x-csrf-token\": token_request.headers[\"x-csrf-token\"],\r\n                                                  \"Content-Type\": \"application/json\",\r\n                                                  \"OData-Version\": \"4.0\"\r\n                                         }, \r\n                                         auth=(user, password))\r\n        api.send(\"response\", f\"Status Code: {result_send_post.status_code}\")\r\n        api.send(\"response\", str(result_send_post.json()))\r\n\r\n    \r\napi.set_port_callback('result', send_result)"
 	},
 	"versionStatus": "active",
-	"icon": "puzzle-piece",
-	
-	"_comment": {
-        	"SPDX-FileCopyrightText": "2022 SAP SE", 
-        	"SPDX-License-Identifier": "Apache-2.0"
-                }
+	"icon": "puzzle-piece"
 }
