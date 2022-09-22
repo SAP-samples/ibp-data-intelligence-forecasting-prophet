@@ -61,7 +61,7 @@
     },
     "required": [
         "ODataConnection"
-    ]
+    ],
     
     "_comment": {
         "SPDX-FileCopyrightText": "2022 SAP", 
