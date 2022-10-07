@@ -1,5 +1,17 @@
 {
 	"properties": {},
+	"groupResources": {
+		"limits": {
+			"cpu": "1200m",
+			"memory": "1024Mi",
+			"ephemeral-storage": "1024Mi"
+		},
+		"requests": {
+			"cpu": "600m",
+			"memory": "256Mi",
+			"ephemeral-storage": "256Mi"
+		}
+	},
 	"description": "IBP External Forecasting Service",
 	"processes": {
 		"python3operator111": {
