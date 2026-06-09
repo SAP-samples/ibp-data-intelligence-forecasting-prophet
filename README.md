@@ -1,4 +1,4 @@
-# NO LONGER SUPPORTER
+# NO LONGER SUPPORTED
 # Forecasting in SAP Integrated Business Planning with an external algorithm based on Prophet
 
 [![REUSE status](https://api.reuse.software/badge/github.com/SAP-samples/ibp-data-intelligence-forecasting-prophet)](https://api.reuse.software/info/github.com/SAP-samples/ibp-data-intelligence-forecasting-prophet)
